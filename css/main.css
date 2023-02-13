@@ -1,0 +1,157 @@
+/*@import url('https://fonts.googleapis.com/css?family=Exo+2:500|Roboto:300,700&subset=cyrillic');*/
+@import url("fonts.css");
+
+body {
+	margin: 0;
+	font-size: 16px;
+	letter-spacing: 0em;
+}
+.top-line {
+	margin-top: 35px;
+	text-decoration:none;
+	white-space: nowrap; 
+}
+.top-mnu ul {
+	padding: 0;
+	margin: 0;
+	margin-left: 30px;
+	margin-right: 60px;
+}
+.top-mnu li {
+	padding: 0;
+	font-size: 16px;
+	display: inline-block;
+	transition: 0.3s;	
+}
+.top-mnu li a { 
+	margin-top: 25px;
+	margin-left: 15px;
+	margin-right: 15px;
+	display: block;
+	color: darkblue;
+}
+h1 {
+	font-size: 30px;
+	color: darkblue;
+}
+
+table {
+	border-collapse: collapse;
+	border: 3px solid darkblue;
+	font-size: 12px;
+}
+
+.text1 {
+	font-size: 14px;
+}
+
+td {
+	border: 1px solid darkblue;
+	padding: 5px;
+}
+
+.tr_h {
+	text-align: center;
+	background: darkblue;
+	color: #ffffff;
+}
+.tr_down {
+	text-align: center;
+	background: #4962D6;
+	color: #ffffff;
+}
+
+.button_go {
+	margin-top: 25px;
+	text-align: center;
+	font-size: 16px;
+	border-radius: 30px;
+	border: 0;
+	color:#fff;
+	box-shadow: none;
+	height:48px;
+	width:370px;
+	background: darkblue;	
+}
+.button_go:hover {
+	background: #4962D6;
+}
+.top-mnu li a:hover {
+	color: blue;
+	text-decoration: underline;
+}
+.toggle-mnu {
+  display: block;
+  width: 50px;
+  height: 50px;
+  margin-top: 20px;
+  position: absolute;
+  top: 0;
+  right: 15px;
+}
+.toggle-mnu span:after, .toggle-mnu span:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+}
+.toggle-mnu span:after {
+  top: 18px;
+}
+.toggle-mnu span {
+  position: relative;
+  display: block;
+}
+.toggle-mnu span:after, .toggle-mnu span:before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+}
+.toggle-mnu span:after {
+  top: 18px;
+}
+.toggle-mnu span {
+  position: relative;
+  display: block;
+}
+.toggle-mnu span, .toggle-mnu span:after, .toggle-mnu span:before {
+  width: 100%;
+  height: 2px;
+  background-color: #6d6d6d;
+  transition: all 0.3s;
+  backface-visibility: hidden;
+  border-radius: 2px;
+}
+.toggle-mnu.on span {
+  background-color: transparent;
+}
+.toggle-mnu.on span:before {
+  transform: rotate(45deg) translate(-1px, 0px);
+}
+.toggle-mnu.on span:after {
+  transform: rotate(-45deg) translate(6px, -7px);
+}
+
+.hidden-mnu {
+	display: none;
+	background: rgba(0,0,0,0.9);
+	position: relative;
+	z-index: 999;
+	height: 100vh;
+}
+.hidden-mnu ul {
+	padding: 30px 0;
+}
+.top-mnu.hidden-mnu li {
+	display: block;
+	text-align: center;
+	padding-right: 0;
+	font-size: 18px;
+	border-top: 1px solid rgba(255,255,255,0.2);
+	border-bottom: 1px solid rgba(255,255,255,0.2);
+	transition: 0s;
+}
+.hidden-mnu li a:after {
+	display: none;
+}
