@@ -1,0 +1,575 @@
+ Вложенные запросы  могут включаться в WHERE или HAVING так (в квадратных скобках указаны необязательные элементы, через | – один из элементов):
+
+WHERE | HAVING выражение оператор_сравнения (вложенный запрос);
+WHERE | HAVING выражение, включающее вложенный запрос;
+WHERE | HAVING выражение [NOT] IN (вложенный запрос);
+WHERE | HAVING выражение  оператор_сравнения  ANY | ALL (вложенный запрос).
+
+WHERE и HAVING могут использоваться в одном запросе. При этом необходимо учитывать порядок выполнения  SQL запроса на выборку на СЕРВЕРЕ:
+FROM
+WHERE
+GROUP BY
+HAVING
+SELECT
+ORDER BY
+
+Вывести максимальную и минимальную цену книг каждого автора, кроме Есенина, количество экземпляров книг которого больше 10. 
+SELECT author,
+    MIN(price) AS Минимальная_цена,
+    MAX(price) AS Максимальная_цена
+FROM book
+WHERE author <> 'Есенин С.А.'
+GROUP BY author
+HAVING SUM(amount) > 10;
+
+Посчитать стоимость всех экземпляров каждого автора без учета книг «Идиот» и «Белая гвардия». В результат включить только тех авторов, у которых суммарная стоимость книг (без учета книг «Идиот» и «Белая гвардия») более 5000 руб. Вычисляемый столбец назвать Стоимость. Результат отсортировать по убыванию стоимости.
+select author, sum(price * amount) as Стоимость
+from book
+where title <> 'Идиот' and title <> 'Белая гвардия'
+group by author
+having Стоимость > 5000
+order by 2 desc
+
+Вывести фамилию с инициалами и общую сумму суточных, полученных за все командировки для тех сотрудников, которые были в командировках больше чем 3 раза, в отсортированном по убыванию сумм суточных виде. Последний столбец назвать Сумма.
+select name, sum(datediff(date_last, date_first - 1) * per_diem) as Сумма
+from trip
+group by name
+having(count(name))>3
+order by Сумма desc
+
+
+
+Чтобы отобрать уникальные элементы некоторого столбца используется ключевое слово DISTINCT, которое размещается сразу после SELECT
+SELECT DISTINCT author
+FROM book;
+
+
+Вывести информацию (автора, книгу и количество) о тех книгах, количество экземпляров которых в таблице book не дублируется.
+select author, title, amount from book 
+where amount in (select amount from book
+GROUP BY amount
+HAVING COUNT(amount)=1);
+
+Вывести информацию (автора, название и цену) о тех книгах, цены которых превышают минимальную цену книги на складе не более чем на 150 рублей в отсортированном по возрастанию цены виде.
+select author, title, price
+from book 
+where price >= (select min(price) from book) and price <= (select min(price)+150 from book)  
+order by 3
+
+Вывести информацию (автора, название и цену) о  книгах, цены которых меньше или равны средней цене книг на складе. Информацию вывести в отсортированном по убыванию цены виде. Среднее вычислить как среднее по цене книги.
+select author, title, price from book
+where price <= (select avg(price) from book)
+order by price desc
+	  
+
+amount > ALL (10, 12) эквивалентно amount > 12
+amount < ALL (10, 12) эквивалентно amount < 10
+amount = ALL (10, 12) не вернет ни одной записи, так как эквивалентно (amount = 10) AND (amount = 12)
+amount <> ALL (10, 12) вернет все записи кроме тех,  в которыхamount равно 10 или 12	 
+
+
+Вывести информацию о книгах(автор, название, цена), цена которых меньше самой большой из минимальных цен, вычисленных для каждого автора.
+select author, title, price 
+from book 
+where price < ANY (select (min(price)) from book
+group by author
+); 
+
+Посчитать сколько и каких экземпляров книг нужно заказать поставщикам, чтобы на складе стало одинаковое количество экземпляров каждой книги, равное значению самого большего количества экземпляров одной книги на складе. Вывести название книги, ее автора, текущее количество экземпляров на складе и количество заказываемых экземпляров книг. Последнему столбцу присвоить имя Заказ. В результат не включать книги, которые заказывать не нужно.
+SELECT title, author, amount, ((SELECT max(amount) FROM book) - amount ) AS Заказ 
+FROM book
+WHERE amount < (select max(amount) from book);
+
+
+
+SELECT author, sum(amount), count(amount)
+FROM book
+GROUP BY author;
+
+
+Посчитать, количество различных книг и количество экземпляров книг каждого автора , хранящихся на складе.  Столбцы назвать Автор, Различных_книг и Количество_экземпляров соответственно.
+select author as Автор, count(title) as Различных_книг, sum(amount) as Количество_экземпляров
+from book
+group by author
+
+
+К групповым функциям SQL относятся: MIN(), MAX() и AVG(), которые вычисляют минимальное, максимальное и среднее значение элементов столбца, относящихся к группе.
+
+Вывести фамилию и инициалы автора, минимальную, максимальную и среднюю цену книг каждого автора . Вычисляемые столбцы назвать Минимальная_цена, Максимальная_цена и Средняя_цена соответственно.
+select author, min(price) as Минимальная_цена, max(price) as Максимальная_цена, avg(price) as Средняя_цена
+from book
+group by author
+
+
+Для каждого автора вычислить суммарную стоимость книг S (имя столбца Стоимость), а также вычислить налог на добавленную стоимость  для полученных сумм (имя столбца НДС ) , который включен в стоимость и составляет k = 18%,  а также стоимость книг  (Стоимость_без_НДС) без него. Значения округлить до двух знаков после запятой. В запросе для расчета НДС(tax)  и Стоимости без НДС(S_without_tax) использовать следующие формулы:
+select author, ROUND(sum(price*amount),2) as Стоимость, ROUND((sum(price*amount)*(18/100))/(1+(18/100)),2) as НДС, ROUND((sum(price*amount)/(1+(18/100))),2) as Стоимость_без_НДС
+from book
+group by author
+
+
+Вычислить среднюю цену и суммарную стоимость тех книг, количество экземпляров которых принадлежит интервалу от 5 до 14, включительно. Столбцы назвать Средняя_цена и Стоимость, значения округлить до 2-х знаков после запятой.
+select round(avg(price),2) as Средняя_цена, round(sum(price*amount),2) as Стоимость
+from book
+where (amount>=5) and (amount<=14)
+
+создать таблицу
+create table fine (
+    fine_id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(30),
+    number_plate VARCHAR(6),
+    violation VARCHAR(50),
+    sum_fine DECIMAL (8,2),
+    date_violation date,
+    date_payment date
+);
+
+добавить строки (если значения пустые, то их колонки просто пропускаем)
+INSERT INTO fine (name, number_plate, violation, date_violation) 
+VALUES 
+ ('Баранов П.Е.', 'Р523ВТ', 'Превышение скорости(от 40 до 60)', '2020-02-14 '), ('Абрамова К.А.', 'О111АВ', 'Проезд на запрещающий сигнал', '2020-02-23'), ('Яковлев Г.Р.', 'Т330ТТ', 'Проезд на запрещающий сигнал', '2020-03-03')
+
+
+
+Для тех, кто уже оплатил штраф, вывести информацию о том, изменялась ли стандартная сумма штрафа.
+SELECT  f.name, f.number_plate, f.violation, 
+   if(
+    f.sum_fine = tv.sum_fine, "Стандартная сумма штрафа", 
+    if(
+      f.sum_fine < tv.sum_fine, "Уменьшенная сумма штрафа", "Увеличенная сумма штрафа"
+    )
+  ) AS description               
+FROM  fine f, traffic_violation tv
+WHERE tv.violation = f.violation and f.sum_fine IS NOT Null;
+
+
+Занести в таблицу fine суммы штрафов, которые должен оплатить водитель, в соответствии с данными из таблицы traffic_violation. При этом суммы заносить только в пустые поля столбца  sum_fine.
+Таблица traffic_violation создана и заполнена.
+update fine as f, traffic_violation as tv
+    set f.sum_fine = tv.sum_fine
+    where tv.violation = f.violation and f.sum_fine is null
+   
+   
+Вывести фамилию, номер машины и нарушение только для тех водителей, которые на одной машине нарушили одно и то же правило   два и более раз. При этом учитывать все нарушения, независимо от того оплачены они или нет. Информацию отсортировать в алфавитном порядке, сначала по фамилии водителя, потом по номеру машины и, наконец, по нарушению.  
+select name, number_plate, violation
+from fine
+group by name, number_plate, violation
+having(count(violation))>1
+order by name, number_plate, violation
+
+
+В таблице fine увеличить в два раза сумму неоплаченных штрафов для отобранных на предыдущем шаге записей. 
+есть 2 таблицы
+из одной получаем список тех, кто два раза нарушил на одной машине и с одной фамилией правила, из второй собираем совпадения и сравниваем с первой, в первой апдейтим сумму штрафа, т.к. нельзя обратиться к таблице, которую апдейтим, то делаем вложенный запрос и обзываем его новым названием query_in
+update fine, (select name, number_plate, violation from fine 
+    group by name, number_plate, violation
+    having(count(violation))>1) query_in
+set sum_fine = sum_fine * 2
+WHERE date_payment is null and fine.violation = query_in.violation and fine.name = query_in.name and fine.number_plate = query_in.number_plate
+
+
+
+в таблицу fine занести дату оплаты соответствующего штрафа из таблицы payment; 
+уменьшить начисленный штраф в таблице fine в два раза  (только для тех штрафов, информация о которых занесена в таблицу payment) , если оплата произведена не позднее 20 дней со дня нарушения.
+update fine as f, payment as p
+set f.date_payment = p.date_payment, 
+f.sum_fine = if(datediff(p.date_payment, p.date_violation)<21, f.sum_fine/2, f.sum_fine)
+where f.violation = p.violation and f.name = p.name and f.number_plate = p.number_plate and f.date_violation = p.date_violation;
+
+
+Создать новую таблицу back_payment, куда внести информацию о неоплаченных штрафах (Фамилию и инициалы водителя, номер машины, нарушение, сумму штрафа  и  дату нарушения) из таблицы fine.
+create table back_payment as (select name, number_plate, violation, sum_fine, date_violation from fine where date_payment is null)
+
+
+разница между ценой из двух разных таблиц где есть одинаковые книги
+select b.price-s.price  as разница
+from book as b, supply as s
+where s.title = b.title and s.author = b.author
+
+
+генерация случайной даты за 2020 год
+(DATE_ADD('2020-01-01', INTERVAL FLOOR(RAND() * 365) DAY)) as Дата
+
+
+select name_author, if (sum(amount) is null, 0, SUM(amount)) as Количество
+from author left join book on author.author_id = book.author_id
+group by name_author
+having Количество < 10
+order by 2
+
+ИЛИ
+
+select name_author, SUM(amount) as Количество
+from author left join book on author.author_id = book.author_id
+group by name_author
+having Количество < 10 or Количество Is null
+order by Количество
+
+
+
+Joinы выбирают из таблицы2 все записи, которые совпадают с айдишником из таблицы1
+
+например здесь мы делаем два запроса и формируем две виртуальные таблицы, 
+из таблицы2 мы берем полученную максимальную строку (лимит1 из верхней строки, отсортированной по убыванию, значит  получаем максимальное значение) и сравниваем значения полученные в таблице1 со значением полученным в таблице2 (т.е. joinы сравнивают значения двух таблиц и их выводят, если они совпадают)
+пример: вывести айдишники жанров, по которым самое большое количество в таблице book (т.к. количество одинаковое у двух жанров, то получаем два значения, а не берем просто max)
+SELECT query_in_1.genre_id
+FROM 
+      (SELECT genre_id, SUM(amount) AS sum_amount
+      FROM book
+      GROUP BY genre_id 
+    )query_in_1 (Виртуальная ТАБЛИЦА1)
+    INNER JOIN
+      (SELECT genre_id, SUM(amount) AS sum_amount
+      FROM book
+      GROUP BY genre_id
+      ORDER BY sum_amount DESC
+      LIMIT 1
+     ) query_in_2 (Виртуальная ТАБЛИЦА2)
+     ON query_in_1.sum_amount= query_in_2.sum_amount   
+
+
+Вывести информацию о книгах (название книги, фамилию и инициалы автора, название жанра, цену и количество экземпляров книг), написанных в самых популярных жанрах, в отсортированном в алфавитном порядке по названию книг виде. Самым популярным считать жанр, общее количество экземпляров книг которого на складе максимально.
+
+select b.title, a.name_author, g.name_genre, b.price, b.amount
+from genre as g inner join book as b on b.genre_id = g.genre_id              
+               inner join author as a on a.author_id = b.author_id
+where b.genre_id in 
+( SELECT query_in_1.genre_id
+FROM 
+      (SELECT genre_id, SUM(amount) AS sum_amount
+      FROM book
+      GROUP BY genre_id 
+    )query_in_1
+    INNER JOIN
+      (SELECT genre_id, SUM(amount) AS sum_amount
+      FROM book
+      GROUP BY genre_id
+      ORDER BY sum_amount DESC
+      LIMIT 1
+     ) query_in_2
+     ON query_in_1.sum_amount= query_in_2.sum_amount   
+)
+order by 1
+
+
+Посчитать, сколько раз была заказана каждая книга, для книги вывести ее автора (нужно посчитать, в каком количестве заказов фигурирует каждая книга).  Вывести фамилию и инициалы автора, название книги, последний столбец назвать Количество. Результат отсортировать сначала  по фамилиям авторов, а потом по названиям книг.
+select author.name_author, book.title, count(buy_book.book_id) as Количество
+from author 
+        inner join book using(author_id)
+        left join buy_book using(book_id)
+group by book.book_id 
+order by 1,2
+
+
+Вывести города, в которых живут клиенты, оформлявшие заказы в интернет-магазине. Указать количество заказов в каждый город, этот столбец назвать Количество. Информацию вывести по убыванию количества заказов, а затем в алфавитном порядке по названию городов.
+select city.name_city, count(buy.buy_id) as Количество
+from city 
+    inner join client using(city_id)
+    inner join buy using(client_id)
+group by client.city_id
+order by 2 desc, 1
+
+
+Вывести номера всех оплаченных заказов и даты, когда они были оплачены.
+select buy.buy_id, buy_step.date_step_end
+from buy inner join buy_step using(buy_id)
+         inner join step using(step_id)    
+where date_step_end is not null and step_id = '1'
+
+
+Вывести информацию о каждом заказе: его номер, кто его сформировал (фамилия пользователя) и его стоимость (сумма произведений количества заказанных книг и их цены), в отсортированном по номеру заказа виде. Последний столбец назвать
+select buy.buy_id, client.name_client, sum(buy_book.amount * book.price) as Стоимость
+from client inner join buy using(client_id)
+            inner join buy_book using(buy_id)
+            inner join buy_book using(buy_id)
+            inner join book using(book_id)
+group by buy_id            
+order by 1
+
+
+Вывести номера заказов (buy_id) и названия этапов, на которых они в данный момент находятся. Если заказ доставлен –  информацию о нем не выводить. Информацию отсортировать по возрастанию buy_id
+select buy.buy_id, step.name_step
+from step inner join buy_step using(step_id)
+         inner join buy using(buy_id)
+where date_step_beg is not null and date_step_end is null
+order by buy_id
+
+
+В таблице city для каждого города указано количество дней, за которые заказ может быть доставлен в этот город (рассматривается только этап "Транспортировка"). Для тех заказов, которые прошли этап транспортировки, вывести количество дней за которое заказ реально доставлен в город. А также, если заказ доставлен с опозданием, указать количество дней задержки, в противном случае вывести 0. В результат включить номер заказа (buy_id), а также вычисляемые столбцы Количество_дней и Опоздание. Информацию вывести в отсортированном по номеру заказа виде.
+select buy.buy_id, 
+datediff(date_step_end, date_step_beg) as Количество_дней,
+if ((datediff(date_step_end, date_step_beg) - city.days_delivery)>0,datediff(date_step_end, date_step_beg) - city.days_delivery,0) as Опоздание
+from buy inner join buy_step using(buy_id)
+         inner join client using(client_id)
+         inner join city using(city_id)
+where step_id = 3 and date_step_end is not null
+order by 1 
+
+Выбрать всех клиентов, которые заказывали книги Достоевского, информацию вывести в отсортированном по алфавиту виде. В решении используйте фамилию автора, а не его id
+select distinct(client.name_client)
+from client inner join buy using(client_id)
+            inner join buy_book using(buy_id)
+            inner join book using(book_id)
+            inner join author using(author_id)
+where name_author = 'Достоевский Ф.М.'
+order by 1
+
+
+
+Вывести жанр (или жанры), в котором было заказано больше всего экземпляров книг, указать это количество . Последний столбец назвать Количество.
+
+select sum(buy_book.amount) as B 
+             from buy_book 
+             inner join book using(book_id)
+             inner join genre using(genre_id)
+             group by name_genre;
+
+select max(query_in.B) as A
+           from 
+             (select sum(buy_book.amount) as B 
+             from buy_book 
+             inner join book using(book_id)
+             inner join genre using(genre_id)
+             group by name_genre) query_in;
+
+select name_genre, sum(buy_book.amount) as Количество   вызываем найденное ниже максимальное число
+from genre inner join book using(genre_id)
+           inner join buy_book using(book_id) 
+group by name_genre           
+having sum(buy_book.amount) in 			сравниваем нашу вызванную выше колонку со значениями полученными ниже во вложенном запросе
+    (select max(query_in.B) as A    из query_1 нашли максимальное число
+           from 
+             (select sum(buy_book.amount) as B    нашли сумму количество заказанных книг группированных по жанру
+             from buy_book 
+             inner join book using(book_id)
+             inner join genre using(genre_id)
+             group by name_genre) query_in      сохранили в query_1
+    );
+
+
+
+Сравнить ежемесячную выручку от продажи книг за текущий и предыдущий годы. Для этого вывести год, месяц, сумму выручки в отсортированном сначала по возрастанию месяцев, затем по возрастанию лет виде. Название столбцов: Год, Месяц, Сумма.
+
+select year(date_payment) as Год, monthname(date_payment) as Месяц, sum(price*amount) as Сумма
+from buy_archive
+group by Год, Месяц
+UNION ALL
+SELECT year(date_step_end) as Год, monthname(date_step_end) as Месяц, sum(book.price*buy_book.amount) as Сумма
+FROM 
+    buy_step 
+    INNER JOIN buy USING(buy_id) 
+    INNER JOIN buy_book USING(buy_id)
+    INNER JOIN book USING(book_id)                
+WHERE buy_step.date_step_end IS NOT Null and buy_step.step_id = 1
+group by Год, Месяц
+order by 2, 1
+
+
+
+Для каждой отдельной книги необходимо вывести информацию о количестве проданных экземпляров и их стоимости за 2020 и 2019 год . Вычисляемые столбцы назвать Количество и Сумма. Информацию отсортировать по убыванию стоимости.
+select query_1.C as title, sum(query_1.A) as Количество, sum(query_1.B) as Сумма
+FROM
+(select book.title as C, sum(buy_book.amount) as A, sum(buy_book.amount * book.price) as B
+from book inner join buy_book using(book_id)
+          inner join buy using(buy_id)
+          inner join buy_step using(buy_id)
+where buy_step.date_step_end is not null and step_id = 1
+group by book.title
+UNION ALL
+select book.title, sum(buy_archive.amount) as A, sum(buy_archive.amount * buy_archive.price) as B
+from buy_archive inner join book using(book_id)
+where buy_archive.date_payment is not null
+group by book.title
+) query_1
+
+group by query_1.C
+order by 3 desc;
+
+
+
+Добавление строки \ Введение \ внесение нового значения на основании другой таблицы
+INSERT INTO buy(buy.buy_description,buy.client_id)
+SELECT 'Связаться со мной по вопросу доставки',5
+FROM client;
+
+
+
+добавляем когда нужно добавить из нескольких строк
+с вальюез
+insert into buy_book (buy_id, book_id, amount)
+VALUES
+(5, (select book_id from book where title = 'Лирика'), 2),
+(5, (select book_id from book where title = 'Белая гвардия'), 1)
+
+с селектом
+insert into attempt (student_id, subject_id, date_attempt, result)
+ (select 
+ (select student_id from student where name_student like 'Баранов Павел'),
+ (select subject_id from subject where name_subject like 'Основы баз данных'),
+  NOW(),
+  NULL);
+
+Случайным образом выбрать три вопроса (запрос) по дисциплине, тестирование по которой собирается проходить студент, занесенный в таблицу attempt последним, и добавить их в таблицу testing.id последней попытки получить как максимальное значение id из таблицы attempt.
+insert into testing (attempt_id, question_id)
+select MAX(attempt_id), question_id 
+FROM attempt RIGHT JOIN question USING(subject_id)
+WHERE attempt.result IS NULL
+GROUP BY question_id
+ORDER BY RAND()
+LIMIT 3;
+
+
+Уменьшить количество тех книг на складе, которые были включены в заказ с номером 5.
+update book 
+join buy_book using(book_id)
+set book.amount = (book.amount-buy_book.amount)
+where title like 'Лирика' or title like 'Белая гвардия'
+
+
+создать таблицу на основании запроса из другой таблицы
+create table buy_pay as 
+(select book.title, author.name_author, book.price, buy_book.amount, book.price * buy_book.amount as Стоимость
+from author inner join book using (author_id)
+            inner join buy_book using (book_id)
+            inner join buy using (buy_id)
+where buy_book.buy_id = '5'
+order by 1)
+
+
+Случайным образом отберите 3 вопроса по дисциплине «Основы баз данных». В результат включите столбцы question_id и name_question (RANDOM)
+select question.question_id, question.name_question
+from question inner join subject using(subject_id)
+where subject.name_subject = 'Основы баз данных'
+ORDER BY RAND()
+limit 3
+
+
+
+Вывести вопросы, которые были включены в тест для Семенова Ивана по дисциплине «Основы SQL» 2020-05-17  (значение attempt_id для этой попытки равно 7). Указать, какой ответ дал студент и правильный он или нет(вывести Верно или Неверно). В результат включить вопрос, ответ и вычисляемый столбец  Результат.
+select question.name_question, answer.name_answer,
+if((answer.is_correct = '1'), 'Верно', 'Неверно') as Результат
+from question inner join testing using(question_id)
+              inner join answer using(answer_id)
+              inner join attempt using(attempt_id)
+              inner join student using(student_id)
+where student.name_student = 'Семенов Иван' and  attempt.attempt_id = '7'   
+
+
+
+Для каждого вопроса вывести процент успешных решений, то есть отношение количества верных ответов к общему количеству ответов, значение округлить до 2-х знаков после запятой. Также вывести название предмета, к которому относится вопрос, и общее количество ответов на этот вопрос. В результат включить название дисциплины, вопросы по ней (столбец назвать Вопрос), а также два вычисляемых столбца Всего_ответов и Успешность. Информацию отсортировать сначала по названию дисциплины, потом по убыванию успешности, а потом по тексту вопроса в алфавитном порядке.
+Поскольку тексты вопросов могут быть длинными, обрезать их 30 символов и добавить многоточие "...".
+select subject.name_subject, 
+concat(SUBSTRING(question.name_question, 1, 30), if(length(question.name_question) > 15, '...', '')) as Вопрос, 
+count(answer.is_correct) as Всего_ответов,
+round((sum(answer.is_correct)/count(answer.is_correct))*100,2) as Успешность
+FROM subject
+    INNER JOIN question  USING(subject_id)
+    INNER JOIN testing  USING(question_id)
+    INNER JOIN answer  USING(answer_id)
+group by subject.name_subject, question.name_question 
+order by 1, 4 desc, 2
+
+1. Чтобы выделить крайние левые n символов из строки используется функция LEFT(строка, n):
+LEFT("abcde", 3) -> "abc"
+2. Соединение строк осуществляется с помощью функции CONCAT(строка_1, строка_2):
+CONCAT("ab","cd") -> "abcd"
+
+
+
+
+
+БД УНИВЕРСИТЕТ
+
+Вывести абитуриентов, которые хотят поступать на образовательную программу «Мехатроника и робототехника» в отсортированном по фамилиям виде.
+select name_enrollee 
+from enrollee inner join program_enrollee using(enrollee_id)
+              inner join program using(program_id)
+where name_program = 'Мехатроника и робототехника'
+order by 1
+
+ Вывести образовательные программы, на которые для поступления необходим предмет «Информатика». Программы отсортировать в обратном алфавитном порядке.
+select program.name_program 
+from program inner join program_subject using (program_id)
+             inner join subject using(subject_id)
+where name_subject = 'Информатика'
+order by 1 desc
+
+
+ Выведите количество абитуриентов, сдавших ЕГЭ по каждому предмету, максимальное, минимальное и среднее значение баллов по предмету ЕГЭ. Вычисляемые столбцы назвать Количество, Максимум, Минимум, Среднее. Информацию отсортировать по названию предмета в алфавитном порядке, среднее значение округлить до одного знака после запятой.
+select subject.name_subject, 
+count(enrollee_subject.enrollee_id) as Количество, 
+max(enrollee_subject.result) as Максимум,
+min(enrollee_subject.result) as Минимум,
+round(avg(enrollee_subject.result),1) as Среднее
+from subject inner join enrollee_subject using(subject_id)
+group by name_subject 
+order by 1
+
+
+Вывести образовательные программы, для которых минимальный балл ЕГЭ по каждому предмету больше или равен 40 баллам. Программы вывести в отсортированном по алфавиту виде.
+select program.name_program
+from program inner join program_subject using(program_id)
+group by program.name_program
+having min(min_result)>=40
+order by 1;
+
+Вывести образовательные программы, которые имеют самый большой план набора,  вместе с этой величиной.
+select name_program, plan from program
+where plan = (select max(plan) from program)
+
+Посчитать, сколько дополнительных баллов получит каждый абитуриент. Столбец с дополнительными баллами назвать Бонус. Информацию вывести в отсортированном по фамилиям виде.
+select enrollee.name_enrollee, if((sum(achievement.bonus)>0), sum(achievement.bonus), 0) as Бонус
+from achievement inner join enrollee_achievement using(achievement_id)
+                 right join enrollee using(enrollee_id)        
+group by 1 
+order by 1
+
+
+
+Вывести образовательные программы, на которые для поступления необходимы предмет «Информатика» и «Математика» в отсортированном по названию программ виде.
+select program.name_program 
+from program inner join program_subject using(program_id)
+             inner join subject using(subject_id)
+where subject.name_subject = 'Информатика' or subject.name_subject = 'Математика'
+group by 1
+having count(subject.name_subject)= 2
+order by 1 
+
+
+
+Выведите сколько человек подало заявление на каждую образовательную программу и конкурс на нее (число поданных заявлений деленное на количество мест по плану), округленный до 2-х знаков после запятой. В запросе вывести название факультета, к которому относится образовательная программа, название образовательной программы, план набора абитуриентов на образовательную программу (plan), количество поданных заявлений (Количество) и Конкурс. Информацию отсортировать в порядке убывания конкурса.
+select department.name_department, program.name_program, program.plan,
+count(program_enrollee.enrollee_id) as Количество,
+round((count(program_enrollee.enrollee_id)/program.plan),2) as Конкурс
+from department inner join program using(department_id) 
+                inner join program_enrollee using(program_id)
+group by program.program_id
+order by 5 desc
+
+
+Посчитать количество баллов каждого абитуриента на каждую образовательную программу, на которую он подал заявление, по результатам ЕГЭ. В результат включить название образовательной программы, фамилию и имя абитуриента, а также столбец с суммой баллов, который назвать itog. Информацию вывести в отсортированном сначала по образовательной программе, а потом по убыванию суммы баллов виде.
+select program.name_program, enrollee.name_enrollee, sum(enrollee_subject.result) as itog
+from enrollee inner join program_enrollee using(enrollee_id)
+              inner join program using(program_id)
+              inner join program_subject using(program_id)
+              inner join subject using(subject_id)
+              inner join enrollee_subject ON subject.subject_id = enrollee_subject.subject_id 
+and enrollee_subject.enrollee_id = enrollee.enrollee_id         
+group by 2, 1
+order by 1, 3 desc
+
+
+
+Вывести название образовательной программы и фамилию тех абитуриентов, которые подавали документы на эту образовательную программу, но не могут быть зачислены на нее. Эти абитуриенты имеют результат по одному или нескольким предметам ЕГЭ, необходимым для поступления на эту образовательную программу, меньше минимального балла. Информацию вывести в отсортированном сначала по программам, а потом по фамилиям абитуриентов виде.
+Например, Баранов Павел по «Физике» набрал 41 балл, а  для образовательной программы «Прикладная механика» минимальный балл по этому предмету определен в 45 баллов. Следовательно, абитуриент на данную программу не может поступить.
+
+ПРОСТО ВЫБИРАЕМ ИМЯ ПРОГРАММЫ, ИМЯ АБИТУРИЕНТА ГДЕ БАЛ АБИТУРИЕТА НИЖЕ ПРОХОДНОГО БАЛА В ПЛАНЕ СДЖОЙНЕННОЙ ТАБЛИЦЫ program_subject (ПЕРЕЧЕНЬ ДЖОЙНОВ ВЗЯТ ИЗ ПРЕДЫДУЩЕГО ЗАПРОСА):
+select  program.name_program, enrollee.name_enrollee
+from enrollee inner join program_enrollee using(enrollee_id)
+              inner join program using(program_id)
+              inner join program_subject using(program_id)
+              inner join subject using(subject_id)
+              inner join enrollee_subject ON subject.subject_id = enrollee_subject.subject_id 
+and enrollee_subject.enrollee_id = enrollee.enrollee_id 
+where (enrollee_subject.result)<(program_subject.min_result)
+group by 2, 1
+order by 1, 2
